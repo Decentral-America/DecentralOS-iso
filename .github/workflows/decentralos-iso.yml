@@ -1,0 +1,46 @@
+name: DecentralOS ISO
+
+# Builds the installable DecentralOS ISO from the rebranded `main` branch of
+# Decentral-America/DecentralOS, with the DecentralChain node in the bundled
+# offline mirror. Download the result from the run's artifacts.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache /usr/local/share/boost /usr/share/swift
+          sudo docker image prune -af >/dev/null
+          df -h / | tail -1
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/checkout@v4
+        with:
+          repository: Decentral-America/DecentralOS
+          ref: main
+          path: omarchy-src
+      - uses: actions/checkout@v4
+        with:
+          repository: omacom/omarchy-pkgs
+          path: omarchy-pkgs
+      - name: Build the ISO
+        run: NO_BOOT_OFFER=1 ./bin/omarchy-iso-make --no-cache --local-source omarchy-src omarchy-pkgs
+      - name: Rename
+        run: |
+          cd release
+          iso=$(ls -t *.iso | head -n1)
+          mv "$iso" "decentralos-$(date +%Y%m%d).iso"
+          sha256sum decentralos-*.iso | tee decentralos.sha256
+          ls -lh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decentralos-iso
+          path: release/decentralos*
+          compression-level: 0
+          retention-days: 30
