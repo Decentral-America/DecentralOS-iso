@@ -49,11 +49,12 @@ jobs:
       - name: Install test
         run: |
           sudo chmod 0666 /dev/kvm
-          docker run --rm --device /dev/kvm -v "$PWD:/w" -w /w             -e OMARCHY_INTEGRATION_DISK_CACHE=none             ghcr.io/archlinux/archlinux:latest bash -euo pipefail -c '
-              pacman -Syu --noconfirm --needed qemu-system-x86 qemu-hw-display-virtio-gpu qemu-hw-display-virtio-vga qemu-img edk2-ovmf socat                 imagemagick tesseract tesseract-data-eng mtools dosfstools jq openssh openssl python curl binutils >/dev/null
-              printf "#!/bin/sh
-exit 0
-" >/usr/local/bin/omarchy-pkg-add
+          docker run --rm --device /dev/kvm -v "$PWD:/w" -w /w \
+            -e OMARCHY_INTEGRATION_DISK_CACHE=none \
+            ghcr.io/archlinux/archlinux:latest bash -euo pipefail -c '
+              pacman -Syu --noconfirm --needed qemu-system-x86 qemu-hw-display-virtio-gpu qemu-hw-display-virtio-vga qemu-img edk2-ovmf socat \
+                imagemagick tesseract tesseract-data-eng mtools dosfstools jq openssh openssl python curl binutils >/dev/null
+              printf "#!/bin/sh\nexit 0\n" >/usr/local/bin/omarchy-pkg-add
               chmod 0755 /usr/local/bin/omarchy-pkg-add
               ./test/integration release/*.iso boot --no-preview --memory 8192 --timeout 1800
             '
