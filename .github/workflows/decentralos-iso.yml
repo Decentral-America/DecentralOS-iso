@@ -44,3 +44,22 @@ jobs:
           path: release/decentralos*
           compression-level: 0
           retention-days: 30
+      # Installs the ISO unattended in a VM and boots the result, so an image
+      # that cannot install is caught here instead of on real hardware.
+      - name: Install test
+        run: |
+          sudo chmod 0666 /dev/kvm
+          docker run --rm --device /dev/kvm -v "$PWD:/w" -w /w             -e OMARCHY_INTEGRATION_DISK_CACHE=none             ghcr.io/archlinux/archlinux:latest bash -euo pipefail -c '
+              pacman -Syu --noconfirm --needed qemu-system-x86 qemu-hw-display-virtio-gpu qemu-hw-display-virtio-vga qemu-img edk2-ovmf socat                 imagemagick tesseract tesseract-data-eng mtools dosfstools jq openssh openssl python curl binutils >/dev/null
+              printf "#!/bin/sh
+exit 0
+" >/usr/local/bin/omarchy-pkg-add
+              chmod 0755 /usr/local/bin/omarchy-pkg-add
+              ./test/integration release/*.iso boot --no-preview --memory 8192 --timeout 1800
+            '
+      - name: Install test logs
+        if: failure()
+        run: |
+          sudo chown -R "$(id -u):$(id -g)" test-runs 2>/dev/null || true
+          find test-runs -maxdepth 2 -type f \( -name "*.log" -o -name "*.txt" \) | head -20
+          for f in $(find test-runs -maxdepth 2 -type f -name "*.log" | head -4); do echo "== $f"; tail -60 "$f"; done
